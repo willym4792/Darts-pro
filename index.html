@@ -67,7 +67,7 @@
     <!-- Intro -->
     <div class="card" id="intro" style="margin-bottom:14px;">
       <h1 style="font-size:22px;font-weight:800;margin:0 0 6px;">🎯 Play Darts Pro vs CPU</h1>
-      <p class="muted">Challenge the CPU in competitive 100-point darts. Each game is <strong>consumable</strong> - pay per game to play!</p>
+      <p class="muted">Race to 5 wins in competitive 100-point darts! Each game is <strong>consumable</strong> - pay per game to play!</p>
       <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
         <button id="startGame" type="button" class="btn-primary" disabled>Start Game</button>
       </div>
@@ -77,8 +77,8 @@
     <div class="card">
       <div class="hud">
         <div class="chip">Turn: <span id="turnBadge">You</span></div>
-        <div class="chip">You: <span id="scoreP1">100</span></div>
-        <div class="chip">CPU: <span id="scoreP2">100</span></div>
+        <div class="chip">You: <span id="scoreP1">100</span> | Wins: <span id="winsP1">0</span></div>
+        <div class="chip">CPU: <span id="scoreP2">100</span> | Wins: <span id="winsP2">0</span></div>
         <div class="chip">Darts: <span id="dartsThrown">0</span> / 3</div>
         <div class="chip">Paid: <span id="paid">No</span></div>
       </div>
@@ -93,7 +93,7 @@
         <button id="resetGame" class="btn-secondary btn-reset">💰 Reset Game (Pay)</button>
       </div>
 
-      <p class="info" style="margin-top:12px">You start first. Beat the CPU to win! Each game is consumable.</p>
+      <p class="info" style="margin-top:12px">First to 5 wins takes the match! Each round is 100 points.</p>
     </div>
 
     <button id="play-again" class="hidden">💰 Pay & Play Again</button>
@@ -125,6 +125,8 @@ const ctx = canvas.getContext('2d');
 const turnBadge = document.getElementById('turnBadge');
 const scoreP1El = document.getElementById('scoreP1');
 const scoreP2El = document.getElementById('scoreP2');
+const winsP1El = document.getElementById('winsP1');
+const winsP2El = document.getElementById('winsP2');
 const dartsThrownEl = document.getElementById('dartsThrown');
 const scorePopup = document.getElementById('scorePopup');
 
@@ -187,6 +189,7 @@ const dartboardSections = [
 let paid = false;
 let currentPlayer = 1;
 let scores = { p1: 100, p2: 100 };
+let wins = { p1: 0, p2: 0 };
 let dartsThrown = 0;
 let currentRoundDarts = [];
 let isThrowing = false;
@@ -356,7 +359,7 @@ function throwDart() {
     if (newScore === 0) {
       scores[playerKey] = 0;
       updateHUD();
-      endGame(currentPlayer);
+      endRound(currentPlayer);
       return;
     } else if (newScore < 0 || newScore === 1) {
       // Bust - score doesn't change
@@ -412,7 +415,7 @@ function cpuThrow() {
       scores.p2 = 0;
       updateHUD();
       cpuTurn = false;
-      endGame(2);
+      endRound(2);
       return;
     } else if (newScore < 0 || newScore === 1) {
       // Bust - score doesn't change
@@ -463,6 +466,7 @@ function resetGame() {
   updatePaid(false);
   currentPlayer = 1;
   scores = { p1: 100, p2: 100 };
+  wins = { p1: 0, p2: 0 };
   dartsThrown = 0;
   currentRoundDarts = [];
   cpuTurn = false;
@@ -508,6 +512,7 @@ startGameBtn.addEventListener('click', () => {
   if (!paid) return;
   currentPlayer = 1;
   scores = { p1: 100, p2: 100 };
+  wins = { p1: 0, p2: 0 };
   dartsThrown = 0;
   currentRoundDarts = [];
   cpuTurn = false;
