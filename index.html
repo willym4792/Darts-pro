@@ -66,8 +66,8 @@
 
     <!-- Intro -->
     <div class="card" id="intro" style="margin-bottom:14px;">
-      <h1 style="font-size:22px;font-weight:800;margin:0 0 6px;">🎯 Play Darts Pro</h1>
-      <p class="muted">Challenge a friend in classic 301 darts. Each game is <strong>consumable</strong> - pay per game to play!</p>
+      <h1 style="font-size:22px;font-weight:800;margin:0 0 6px;">🎯 Play Darts Pro vs CPU</h1>
+      <p class="muted">Challenge the CPU in competitive 100-point darts. Each game is <strong>consumable</strong> - pay per game to play!</p>
       <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
         <button id="startGame" type="button" class="btn-primary" disabled>Start Game</button>
       </div>
@@ -76,9 +76,9 @@
     <!-- Game Card -->
     <div class="card">
       <div class="hud">
-        <div class="chip">Turn: <span id="turnBadge">Player 1</span></div>
-        <div class="chip">P1: <span id="scoreP1">301</span></div>
-        <div class="chip">P2: <span id="scoreP2">301</span></div>
+        <div class="chip">Turn: <span id="turnBadge">You</span></div>
+        <div class="chip">You: <span id="scoreP1">100</span></div>
+        <div class="chip">CPU: <span id="scoreP2">100</span></div>
         <div class="chip">Darts: <span id="dartsThrown">0</span> / 3</div>
         <div class="chip">Paid: <span id="paid">No</span></div>
       </div>
@@ -93,7 +93,7 @@
         <button id="resetGame" class="btn-secondary btn-reset">💰 Reset Game (Pay)</button>
       </div>
 
-      <p class="info" style="margin-top:12px">Player 1 starts. Each game is consumable - pay to play again!</p>
+      <p class="info" style="margin-top:12px">You start first. Beat the CPU to win! Each game is consumable.</p>
     </div>
 
     <button id="play-again" class="hidden">💰 Pay & Play Again</button>
@@ -186,10 +186,11 @@ const dartboardSections = [
 
 let paid = false;
 let currentPlayer = 1;
-let scores = { p1: 301, p2: 301 };
+let scores = { p1: 100, p2: 100 };
 let dartsThrown = 0;
 let currentRoundDarts = [];
 let isThrowing = false;
+let cpuTurn = false;
 
 function updatePaid(v){
   paid = v; paidEl.textContent = v ? 'Yes' : 'No';
@@ -320,7 +321,7 @@ function showScorePopup(text) {
 }
 
 function throwDart() {
-  if (!paid || isThrowing || dartsThrown >= 3) return;
+  if (!paid || isThrowing || dartsThrown >= 3 || cpuTurn) return;
   isThrowing = true;
   disable(throwBtn, true);
 
@@ -334,6 +335,7 @@ function throwDart() {
     return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
   };
 
+  // Player has 85% accuracy
   const isAccurate = Math.random() < 0.85;
   const spread = isAccurate ? 25 : 70;
   const offsetX = randomGaussian() * spread;
@@ -374,17 +376,83 @@ function throwDart() {
   }, 200);
 }
 
+function cpuThrow() {
+  if (!paid || dartsThrown >= 3) return;
+  cpuTurn = true;
+  disable(throwBtn, true);
+
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  const randomGaussian = () => {
+    let u = 0, v = 0;
+    while(u === 0) u = Math.random();
+    while(v === 0) v = Math.random();
+    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  };
+
+  // CPU has 75% accuracy (slightly worse than player)
+  const isAccurate = Math.random() < 0.75;
+  const spread = isAccurate ? 30 : 80;
+  const offsetX = randomGaussian() * spread;
+  const offsetY = randomGaussian() * spread;
+  const x = centerX + offsetX;
+  const y = centerY + offsetY;
+
+  const scoreResult = calculateScore(x, y);
+  showScorePopup(`CPU: ${scoreResult.text}`);
+
+  setTimeout(() => {
+    currentRoundDarts.push({ x, y, score: scoreResult });
+    drawDartboard();
+
+    const newScore = scores.p2 - scoreResult.value;
+
+    if (newScore === 0) {
+      scores.p2 = 0;
+      updateHUD();
+      cpuTurn = false;
+      endGame(2);
+      return;
+    } else if (newScore < 0 || newScore === 1) {
+      // Bust - score doesn't change
+    } else {
+      scores.p2 = newScore;
+    }
+
+    dartsThrown++;
+    updateHUD();
+
+    if (dartsThrown >= 3) {
+      cpuTurn = false;
+      setTimeout(() => nextTurn(), 800);
+    } else {
+      setTimeout(() => cpuThrow(), 1000);
+    }
+  }, 600);
+}
+
 function nextTurn() {
   currentPlayer = currentPlayer === 1 ? 2 : 1;
   dartsThrown = 0;
   currentRoundDarts = [];
   drawDartboard();
   updateHUD();
-  disable(throwBtn, false);
+  
+  if (currentPlayer === 2) {
+    // CPU's turn
+    cpuTurn = true;
+    disable(throwBtn, true);
+    setTimeout(() => cpuThrow(), 1000);
+  } else {
+    // Player's turn
+    cpuTurn = false;
+    disable(throwBtn, false);
+  }
 }
 
 function updateHUD() {
-  turnBadge.textContent = `Player ${currentPlayer}`;
+  turnBadge.textContent = currentPlayer === 1 ? 'You' : 'CPU';
   scoreP1El.textContent = String(scores.p1);
   scoreP2El.textContent = String(scores.p2);
   dartsThrownEl.textContent = String(dartsThrown);
@@ -394,9 +462,10 @@ function resetGame() {
   // Force payment for new game
   updatePaid(false);
   currentPlayer = 1;
-  scores = { p1: 301, p2: 301 };
+  scores = { p1: 100, p2: 100 };
   dartsThrown = 0;
   currentRoundDarts = [];
+  cpuTurn = false;
   drawDartboard();
   updateHUD();
   disable(throwBtn, true);
@@ -408,14 +477,16 @@ function resetGame() {
 }
 
 function endGame(winner) {
+  const winnerName = winner === 1 ? 'You Win!' : 'CPU Wins!';
   const msg = document.createElement('div');
-  msg.textContent = `Player ${winner} Wins!`;
-  msg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:42px;font-weight:900;color:#fbbf24;text-shadow:0 0 30px #fbbf24;pointer-events:none;z-index:1000;';
+  msg.textContent = winnerName;
+  msg.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:42px;font-weight:900;color:${winner === 1 ? '#4ade80' : '#f87171'};text-shadow:0 0 30px ${winner === 1 ? '#4ade80' : '#f87171'};pointer-events:none;z-index:1000;`;
   document.body.appendChild(msg);
   setTimeout(() => msg.remove(), 2000);
 
   // Disable throw button after game ends
   disable(throwBtn, true);
+  cpuTurn = false;
   
   // Show play again message
   setTimeout(() => {
@@ -435,7 +506,14 @@ playBtn.addEventListener('click', (e) => {
 
 startGameBtn.addEventListener('click', () => {
   if (!paid) return;
-  resetGame();
+  currentPlayer = 1;
+  scores = { p1: 100, p2: 100 };
+  dartsThrown = 0;
+  currentRoundDarts = [];
+  cpuTurn = false;
+  drawDartboard();
+  updateHUD();
+  disable(throwBtn, false);
 });
 
 throwBtn.addEventListener('click', throwDart);
