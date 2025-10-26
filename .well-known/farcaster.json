@@ -1,14 +1,14 @@
 {
   "accountAssociation": {
-    "header": "eyJmaWQiOjUyNzMyOSwidHlwZSI6ImF1dGgiLCJrZXkiOiIweDZlMkNDYTllNTJhMUM2M0ExODgyNTMzMzJGMzcxRTk1OUYzOGRjMWYifQ",
-    "payload": "eyJkb21haW4iOiJ4by1nYW1lLWFtYmVyLnZlcmNlbC5hcHAifQ",
-    "signature": "gcguZCv8AmbdH+LcpvBwyghc2kGSVenk3sl7YEhpCLYyYUa9jtjipOmwykBU8ucaIS/0nqmX5M6COu16XcrskRs="
+    "header": "eyJmaWQiOjU2NjQ4NSwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweEJBODVjM0QxRTZiQTcwNzRhODU3NTMwMGQ1NzQwODc3NjFGQTJmOEUifQ",
+    "payload": "eyJkb21haW4iOiJkYXJ0cy1wcm8udmVyY2VsLmFwcCJ9",
+    "signature": "H8l4/D6yYztQ8XWuXIxLHpw5SJSX1TTGkuFgTJ581PhoMFMtnQC44i3Va+8lnngAalryYg3wMnfW03ZbIi/6xxs="
   },
   "miniapp": {
     "version": "1",
     "name": "XO Game",
     "iconUrl": "https://play-lh.googleusercontent.com/KZTO1L6r8CzWlg2InJoU_ndRAuvYiaS-35MyYdDPeeVCPNVfM9SBY2qRGjvvADmDIR8=w240-h480-rw",
-    "homeUrl": "https://xo-game-amber.vercel.app/",
+    "homeUrl": "https://darts-pro.vercel.app/",
     "imageUrl": "https://raw.githubusercontent.com/enchanted-assets/public/main/images/tetris-cover.png",
     "buttonTitle": "Play Now",
     "splashImageUrl": "https://raw.githubusercontent.com/enchanted-assets/public/main/images/tetris-splash.png",
