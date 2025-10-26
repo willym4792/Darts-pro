@@ -6,8 +6,8 @@
   },
   "miniapp": {
     "version": "1",
-    "name": "XO Game",
-    "iconUrl": "https://play-lh.googleusercontent.com/KZTO1L6r8CzWlg2InJoU_ndRAuvYiaS-35MyYdDPeeVCPNVfM9SBY2qRGjvvADmDIR8=w240-h480-rw",
+    "name": "Darts Pro",
+    "iconUrl": "https://imgs.search.brave.com/1qailSR7rCLYxUpQ2HkzB6cYDA9NNrMiLbcs5-7w8vs/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly9nYW1l/Zm9yZ2UuY29tL2Rl/LURFL2xpdHRsZWdh/bWVzL2luY2x1ZGVz/L2ltYWdlcy9nYW1l/cy8xMDI0NF81ZWIz/ZjBiZDg3NTBkLmpw/Zw",
     "homeUrl": "https://darts-pro.vercel.app/",
     "imageUrl": "https://raw.githubusercontent.com/enchanted-assets/public/main/images/tetris-cover.png",
     "buttonTitle": "Play Now",
