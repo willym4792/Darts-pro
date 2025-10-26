@@ -117,6 +117,7 @@ const statusEl = document.getElementById('status');
 const playBtn = document.getElementById('play');
 const playAgainBtn = document.getElementById('play-again');
 const paidEl = document.getElementById('paid');
+const introCard = document.getElementById('intro');
 const startGameBtn = document.getElementById('startGame');
 const throwBtn = document.getElementById('throwBtn');
 const resetGameBtn = document.getElementById('resetGame');
@@ -454,15 +455,41 @@ function nextTurn() {
   }
 }
 
+function endRound(winner) {
+  const playerKey = winner === 1 ? 'p1' : 'p2';
+  wins[playerKey]++;
+  winsP1El.textContent = String(wins.p1);
+  winsP2El.textContent = String(wins.p2);
+
+  if (wins[playerKey] >= 5) {
+    endGame(winner);
+  } else {
+    setTimeout(() => {
+      // Start new round
+      scores = { p1: 100, p2: 100 };
+      currentPlayer = 1;
+      dartsThrown = 0;
+      currentRoundDarts = [];
+      cpuTurn = false;
+      drawDartboard();
+      updateHUD();
+      disable(throwBtn, false);
+    }, 1500);
+  }
+}
+
 function updateHUD() {
   turnBadge.textContent = currentPlayer === 1 ? 'You' : 'CPU';
   scoreP1El.textContent = String(scores.p1);
   scoreP2El.textContent = String(scores.p2);
+  winsP1El.textContent = String(wins.p1);
+  winsP2El.textContent = String(wins.p2);
   dartsThrownEl.textContent = String(dartsThrown);
 }
 
 function resetGame() {
-  // Force payment for new game
+  // Show intro bar and require payment
+  introCard.classList.remove('hidden');
   updatePaid(false);
   currentPlayer = 1;
   scores = { p1: 100, p2: 100 };
@@ -510,26 +537,9 @@ playBtn.addEventListener('click', (e) => {
 
 startGameBtn.addEventListener('click', () => {
   if (!paid) return;
+  introCard.classList.add('hidden');
   currentPlayer = 1;
   scores = { p1: 100, p2: 100 };
   wins = { p1: 0, p2: 0 };
   dartsThrown = 0;
   currentRoundDarts = [];
-  cpuTurn = false;
-  drawDartboard();
-  updateHUD();
-  disable(throwBtn, false);
-});
-
-throwBtn.addEventListener('click', throwDart);
-resetGameBtn.addEventListener('click', resetGame);
-
-drawDartboard();
-updateHUD();
-
-window.addEventListener('error', e => console.error('Error:', e.error || e));
-window.addEventListener('unhandledrejection', e => console.error('Unhandled promise:', e.reason));
-</script>
-</body>
-</html>
-
