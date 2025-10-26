@@ -67,7 +67,7 @@
     <!-- Intro -->
     <div class="card" id="intro" style="margin-bottom:14px;">
       <h1 style="font-size:22px;font-weight:800;margin:0 0 6px;">🎯 Play Darts Pro</h1>
-      <p class="muted">Challenge a friend in classic 301 darts. Take turns throwing 3 darts each. First to reach exactly 0 wins!</p>
+      <p class="muted">Challenge a friend in classic 301 darts. Each game is <strong>consumable</strong> - pay per game to play!</p>
       <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
         <button id="startGame" type="button" class="btn-primary" disabled>Start Game</button>
       </div>
@@ -90,10 +90,10 @@
 
       <div class="controls">
         <button id="throwBtn" class="btn-primary" disabled>🎯 Throw Dart</button>
-        <button id="resetGame" class="btn-secondary btn-reset">Reset Game</button>
+        <button id="resetGame" class="btn-secondary btn-reset">💰 Reset Game (Pay)</button>
       </div>
 
-      <p class="info" style="margin-top:12px">Player 1 starts. Each player gets 3 darts per turn.</p>
+      <p class="info" style="margin-top:12px">Player 1 starts. Each game is consumable - pay to play again!</p>
     </div>
 
     <button id="play-again" class="hidden">💰 Pay & Play Again</button>
@@ -391,13 +391,20 @@ function updateHUD() {
 }
 
 function resetGame() {
+  // Force payment for new game
+  updatePaid(false);
   currentPlayer = 1;
   scores = { p1: 301, p2: 301 };
   dartsThrown = 0;
   currentRoundDarts = [];
   drawDartboard();
   updateHUD();
-  disable(throwBtn, !paid);
+  disable(throwBtn, true);
+  disable(startGameBtn, true);
+  
+  // Show payment overlay
+  document.getElementById('intro-overlay').classList.remove('hidden');
+  addLine('<span class="warn">Pay to start a new game.</span>');
 }
 
 function endGame(winner) {
@@ -407,14 +414,13 @@ function endGame(winner) {
   document.body.appendChild(msg);
   setTimeout(() => msg.remove(), 2000);
 
-  playAgainBtn.classList.remove('hidden');
-  playAgainBtn.onclick = (ev) => {
-    ev.preventDefault();
-    payThen(() => {
-      playAgainBtn.classList.add('hidden');
-      resetGame();
-    }, playAgainBtn);
-  };
+  // Disable throw button after game ends
+  disable(throwBtn, true);
+  
+  // Show play again message
+  setTimeout(() => {
+    addLine('<span class="warn">Game over! Reset to play again (payment required).</span>');
+  }, 2000);
 }
 
 /* ===== Event Listeners ===== */
