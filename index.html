@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>🎯 Darts Pro — Farcaster Mini App</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: linear-gradient(135deg, #0a0e13 0%, #1a1f2e 100%);
+    color: #e7ecf0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100dvh; padding: 20px;
+  }
+  .wrap { width: min(900px, 96vw); position: relative; }
+  .card { background: #12171b; border: 1px solid #1f2a32; border-radius: 14px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+  .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(8,11,14,.85); backdrop-filter: blur(4px); padding: 16px; z-index: 100; }
+  .hidden { display: none !important; }
+
+  h1 { font-size: 28px; font-weight: 900; margin-bottom: 12px; text-shadow: 0 2px 10px rgba(56,189,248,0.5); }
+  .muted { color: #9aa7b1; font-size: 14px; line-height: 1.4; margin-bottom: 16px; }
+
+  .btn-primary{ padding:14px 28px; background:linear-gradient(135deg,#ff8c42,#ff6b1a); color:#fff; border:none; border-radius:12px; font-weight:900; font-size:16px; cursor:pointer; box-shadow:0 6px 20px rgba(255,107,26,0.4); transition:all .2s; text-transform:uppercase; letter-spacing:.5px; }
+  .btn-primary:hover:not(:disabled){ transform:translateY(-2px); box-shadow:0 8px 25px rgba(255,107,26,.5); }
+  .btn-primary:disabled{ opacity:.6; cursor:not-allowed; }
+
+  .btn-secondary{ padding:12px 24px; background:linear-gradient(135deg,#38bdf8,#34d399); color:#0a1929; border:none; border-radius:10px; font-weight:900; font-size:14px; cursor:pointer; box-shadow:0 4px 15px rgba(56,189,248,.3); transition:all .2s; letter-spacing:.5px; text-transform:uppercase; }
+  .btn-reset{ background:linear-gradient(135deg,#f43f5e,#f59e0b); }
+
+  #status{ margin-top:15px; font-size:13px; line-height:1.5; background:#0f151a; border:1px solid #1f2a32; border-radius:10px; padding:12px; }
+  #status b{ color:#cde7d8; } #status .ok{ color:#4ade80; } #status .warn{ color:#fbbf24; } #status .err{ color:#f87171; } #status a{ color:#86c6ff; text-decoration:none; }
+
+  /* HUD + Canvas */
+  .hud { display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin: 10px 0 16px; }
+  .chip { background:#0f1418; border:1px solid #1f2a32; border-radius:10px; padding:8px 12px; font-weight:800; font-size:13px; }
+  
+  #dartboard { display: block; margin: 0 auto 16px; border-radius: 14px; border: 3px solid #1f2937; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+  
+  .controls { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:14px; }
+  .info { color:#94a3b8; font-size:13px; text-align: center; }
+
+  #play-again { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); padding:16px 32px; background:linear-gradient(135deg,#ff8c42,#ff6b1a); color:#fff; border:none; border-radius:12px; font-weight:900; font-size:18px; cursor:pointer; box-shadow:0 10px 40px rgba(255,107,26,.5); z-index:50; }
+  
+  .score-popup { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fbbf24; color: #0a1929; padding: 16px 32px; border-radius: 12px; font-size: 32px; font-weight: 900; box-shadow: 0 10px 40px rgba(251, 191, 36, 0.6); z-index: 10; animation: popIn 0.3s ease-out; }
+  @keyframes popIn { 0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+
+  @media (max-width: 720px) { #dartboard { width: 320px; height: 320px; } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- Pay Overlay -->
+    <div id="intro-overlay" class="overlay">
+      <div class="card" role="dialog" aria-modal="true">
+        <h1>🎯 Play Darts Pro</h1>
+        <p class="muted">A small Base transfer is required to start playing (mobile & desktop supported).</p>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div class="muted" style="font-size:12px;">Edit recipient/amount in code if needed.</div>
+          <button id="play" class="btn-primary">💰 Pay & Play</button>
+        </div>
+        <div id="status" class="hidden"></div>
+      </div>
+    </div>
+
+    <!-- Intro -->
+    <div class="card" id="intro" style="margin-bottom:14px;">
+      <h1 style="font-size:22px;font-weight:800;margin:0 0 6px;">🎯 Play Darts Pro</h1>
+      <p class="muted">Challenge a friend in classic 301 darts. Take turns throwing 3 darts each. First to reach exactly 0 wins!</p>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+        <button id="startGame" type="button" class="btn-primary" disabled>Start Game</button>
+      </div>
+    </div>
+
+    <!-- Game Card -->
+    <div class="card">
+      <div class="hud">
+        <div class="chip">Turn: <span id="turnBadge">Player 1</span></div>
+        <div class="chip">P1: <span id="scoreP1">301</span></div>
+        <div class="chip">P2: <span id="scoreP2">301</span></div>
+        <div class="chip">Darts: <span id="dartsThrown">0</span> / 3</div>
+        <div class="chip">Paid: <span id="paid">No</span></div>
+      </div>
+
+      <div style="position: relative;">
+        <canvas id="dartboard" width="400" height="400"></canvas>
+        <div id="scorePopup" class="hidden score-popup"></div>
+      </div>
+
+      <div class="controls">
+        <button id="throwBtn" class="btn-primary" disabled>🎯 Throw Dart</button>
+        <button id="resetGame" class="btn-secondary btn-reset">Reset Game</button>
+      </div>
+
+      <p class="info" style="margin-top:12px">Player 1 starts. Each player gets 3 darts per turn.</p>
+    </div>
+
+    <button id="play-again" class="hidden">💰 Pay & Play Again</button>
+  </div>
+
+<script type="module">
+import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk';
+sdk.actions.ready();
+
+/* ===== CONFIG — set these ===== */
+const USE_BASE_SEPOLIA = false; // true = testnet
+const RECIPIENT = "0x49d31B3dDEd689c0FD3168307Cb1f69F5c680f06"; // <- your address
+const AMOUNT_ETH = "0.00001"; // <- your fee
+
+const BASE_MAINNET = { chainId: "0x2105", explorer: "https://basescan.org/tx/" };
+const BASE_SEPOLIA = { chainId: "0x14a34", explorer: "https://sepolia.basescan.org/tx/" };
+const TARGET = USE_BASE_SEPOLIA ? BASE_SEPOLIA : BASE_MAINNET;
+
+/* ===== DOM ===== */
+const statusEl = document.getElementById('status');
+const playBtn = document.getElementById('play');
+const playAgainBtn = document.getElementById('play-again');
+const paidEl = document.getElementById('paid');
+const startGameBtn = document.getElementById('startGame');
+const throwBtn = document.getElementById('throwBtn');
+const resetGameBtn = document.getElementById('resetGame');
+const canvas = document.getElementById('dartboard');
+const ctx = canvas.getContext('2d');
+const turnBadge = document.getElementById('turnBadge');
+const scoreP1El = document.getElementById('scoreP1');
+const scoreP2El = document.getElementById('scoreP2');
+const dartsThrownEl = document.getElementById('dartsThrown');
+const scorePopup = document.getElementById('scorePopup');
+
+const showStatus = () => statusEl.classList.remove('hidden');
+const addLine = html => { showStatus(); statusEl.insertAdjacentHTML('beforeend', `<div>${html}</div>`); };
+const clearStatus = () => statusEl.innerHTML = '';
+const disable = (el, yes=true) => { if (el) el.disabled = yes; };
+
+/* ===== Wallet Helpers ===== */
+function parseEther(x){ const [w,f=""] = String(x).split('.'); const frac=(f+'0'.repeat(18)).slice(0,18); return '0x'+(BigInt(w)*10n**18n + BigInt(frac)).toString(16); }
+async function getProvider(){ try{ const p = await sdk.wallet.getEthereumProvider(); if (p) return p; }catch{} return window.ethereum??null; }
+async function ensureChain(provider, chainId){
+  const current=(await provider.request({method:'eth_chainId'}))?.toLowerCase();
+  if(current===chainId.toLowerCase()) return;
+  try{ await provider.request({method:'wallet_switchEthereumChain', params:[{chainId}]}); }
+  catch(e){
+    if(e?.code===4902){
+      await provider.request({method:'wallet_addEthereumChain', params:[{chainId}]});
+      await provider.request({method:'wallet_switchEthereumChain', params:[{chainId}]});
+    } else { throw e; }
+  }
+}
+async function requiredPayment(){
+  clearStatus();
+  addLine(`<b>Step 1:</b> Locating wallet provider…`);
+  const provider=await getProvider();
+  if(!provider){ addLine(`<span class="err">No wallet available.</span> Open in Farcaster or enable a wallet.`); throw new Error('NO_PROVIDER'); }
+  addLine(`<span class="ok">Provider ready.</span>`);
+  addLine(`<b>Step 2:</b> Requesting accounts…`);
+  const [from] = await provider.request({ method:'eth_requestAccounts' });
+  addLine(`<span class="ok">Account: ${from.slice(0,6)}…${from.slice(-4)}</span>`);
+  addLine(`<b>Step 3:</b> Switching to Base${USE_BASE_SEPOLIA?' Sepolia':''}…`);
+  await ensureChain(provider, TARGET.chainId);
+  addLine(`<span class="ok">On Base${USE_BASE_SEPOLIA?' Sepolia':''}.</span>`);
+  addLine(`<b>Step 4:</b> Sending ${AMOUNT_ETH} ETH to ${RECIPIENT.slice(0,6)}…${RECIPIENT.slice(-4)}…`);
+  const hash = await provider.request({
+    method:'eth_sendTransaction',
+    params:[{ from, to: RECIPIENT, value: parseEther(AMOUNT_ETH) }]
+  });
+  addLine(`<span class="ok">TX sent.</span> <a target="_blank" rel="noopener" href="${TARGET.explorer}${hash}">View on Basescan</a>`);
+  return hash;
+}
+async function payThen(action, triggerBtn){
+  try{ disable(triggerBtn,true); await requiredPayment(); await action(); }
+  catch(e){ console.warn('Payment gate blocked action:', e); addLine(`<span class="warn">Payment required. Please try again.</span>`); }
+  finally{ disable(triggerBtn,false); }
+}
+
+/* ===== Darts Game ===== */
+const dartboardSections = [
+  { angle: 0, value: 6 }, { angle: 18, value: 13 }, { angle: 36, value: 4 },
+  { angle: 54, value: 18 }, { angle: 72, value: 1 }, { angle: 90, value: 20 },
+  { angle: 108, value: 5 }, { angle: 126, value: 12 }, { angle: 144, value: 9 },
+  { angle: 162, value: 14 }, { angle: 180, value: 11 }, { angle: 198, value: 8 },
+  { angle: 216, value: 16 }, { angle: 234, value: 7 }, { angle: 252, value: 19 },
+  { angle: 270, value: 3 }, { angle: 288, value: 17 }, { angle: 306, value: 2 },
+  { angle: 324, value: 15 }, { angle: 342, value: 10 }
+];
+
+let paid = false;
+let currentPlayer = 1;
+let scores = { p1: 301, p2: 301 };
+let dartsThrown = 0;
+let currentRoundDarts = [];
+let isThrowing = false;
+
+function updatePaid(v){
+  paid = v; paidEl.textContent = v ? 'Yes' : 'No';
+  if (v){ startGameBtn.disabled = false; throwBtn.disabled = false; }
+}
+
+function drawDartboard() {
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+  const radius = 140;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+  ctx.fillStyle = '#0f172a';
+  ctx.fill();
+  ctx.strokeStyle = '#475569';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Sections
+  const colors = ['#000000', '#ffffff'];
+  const doubleRing = { inner: radius * 0.90, outer: radius };
+  const tripleRing = { inner: radius * 0.60, outer: radius * 0.65 };
+  
+  for (let i = 0; i < 20; i++) {
+    const angle1 = (dartboardSections[i].angle - 9) * Math.PI / 180;
+    const angle2 = (dartboardSections[i].angle + 9) * Math.PI / 180;
+    const color = colors[i % 2];
+
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.arc(centerX, centerY, radius * 0.58, angle1, angle2);
+    ctx.closePath();
+    ctx.fillStyle = color === '#000000' ? '#1e293b' : '#64748b';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, tripleRing.outer, angle1, angle2);
+    ctx.arc(centerX, centerY, tripleRing.inner, angle2, angle1, true);
+    ctx.closePath();
+    ctx.fillStyle = color === '#000000' ? '#dc2626' : '#16a34a';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, doubleRing.outer, angle1, angle2);
+    ctx.arc(centerX, centerY, doubleRing.inner, angle2, angle1, true);
+    ctx.closePath();
+    ctx.fillStyle = color === '#000000' ? '#dc2626' : '#16a34a';
+    ctx.fill();
+
+    const numAngle = dartboardSections[i].angle * Math.PI / 180;
+    const numRadius = radius + 20;
+    const numX = centerX + Math.cos(numAngle) * numRadius;
+    const numY = centerY + Math.sin(numAngle) * numRadius;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(dartboardSections[i].value, numX, numY);
+  }
+
+  // Bullseye
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius * 0.08, 0, 2 * Math.PI);
+  ctx.fillStyle = '#16a34a';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius * 0.04, 0, 2 * Math.PI);
+  ctx.fillStyle = '#dc2626';
+  ctx.fill();
+
+  // Draw thrown darts
+  currentRoundDarts.forEach(dart => {
+    ctx.beginPath();
+    ctx.arc(dart.x, dart.y, 4, 0, 2 * Math.PI);
+    ctx.fillStyle = currentPlayer === 1 ? '#3b82f6' : '#ef4444';
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+}
+
+function calculateScore(x, y) {
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+  const radius = 140;
+  const dx = x - centerX;
+  const dy = y - centerY;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  let angle = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+
+  if (distance < radius * 0.04) return { value: 50, text: 'BULL!' };
+  if (distance < radius * 0.08) return { value: 25, text: '25' };
+  if (distance > radius) return { value: 0, text: 'MISS' };
+
+  let section = null;
+  for (let i = 0; i < dartboardSections.length; i++) {
+    const sectionAngle = dartboardSections[i].angle;
+    const diff = Math.abs(((angle - sectionAngle + 180) % 360) - 180);
+    if (diff < 9) { section = dartboardSections[i]; break; }
+  }
+  if (!section) return { value: 0, text: 'MISS' };
+
+  const tripleInner = radius * 0.60;
+  const tripleOuter = radius * 0.65;
+  const doubleInner = radius * 0.90;
+  const doubleOuter = radius;
+
+  if (distance >= tripleInner && distance <= tripleOuter) {
+    return { value: section.value * 3, text: `T${section.value}` };
+  }
+  if (distance >= doubleInner && distance <= doubleOuter) {
+    return { value: section.value * 2, text: `D${section.value}` };
+  }
+  return { value: section.value, text: `${section.value}` };
+}
+
+function showScorePopup(text) {
+  scorePopup.textContent = text;
+  scorePopup.classList.remove('hidden');
+  setTimeout(() => scorePopup.classList.add('hidden'), 800);
+}
+
+function throwDart() {
+  if (!paid || isThrowing || dartsThrown >= 3) return;
+  isThrowing = true;
+  disable(throwBtn, true);
+
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  const randomGaussian = () => {
+    let u = 0, v = 0;
+    while(u === 0) u = Math.random();
+    while(v === 0) v = Math.random();
+    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  };
+
+  const isAccurate = Math.random() < 0.85;
+  const spread = isAccurate ? 25 : 70;
+  const offsetX = randomGaussian() * spread;
+  const offsetY = randomGaussian() * spread;
+  const x = centerX + offsetX;
+  const y = centerY + offsetY;
+
+  const scoreResult = calculateScore(x, y);
+  showScorePopup(scoreResult.text);
+
+  setTimeout(() => {
+    currentRoundDarts.push({ x, y, score: scoreResult });
+    drawDartboard();
+
+    const playerKey = currentPlayer === 1 ? 'p1' : 'p2';
+    const newScore = scores[playerKey] - scoreResult.value;
+
+    if (newScore === 0) {
+      scores[playerKey] = 0;
+      updateHUD();
+      endGame(currentPlayer);
+      return;
+    } else if (newScore < 0 || newScore === 1) {
+      // Bust - score doesn't change
+    } else {
+      scores[playerKey] = newScore;
+    }
+
+    dartsThrown++;
+    updateHUD();
+    isThrowing = false;
+
+    if (dartsThrown >= 3) {
+      setTimeout(() => nextTurn(), 800);
+    } else {
+      disable(throwBtn, false);
+    }
+  }, 200);
+}
+
+function nextTurn() {
+  currentPlayer = currentPlayer === 1 ? 2 : 1;
+  dartsThrown = 0;
+  currentRoundDarts = [];
+  drawDartboard();
+  updateHUD();
+  disable(throwBtn, false);
+}
+
+function updateHUD() {
+  turnBadge.textContent = `Player ${currentPlayer}`;
+  scoreP1El.textContent = String(scores.p1);
+  scoreP2El.textContent = String(scores.p2);
+  dartsThrownEl.textContent = String(dartsThrown);
+}
+
+function resetGame() {
+  currentPlayer = 1;
+  scores = { p1: 301, p2: 301 };
+  dartsThrown = 0;
+  currentRoundDarts = [];
+  drawDartboard();
+  updateHUD();
+  disable(throwBtn, !paid);
+}
+
+function endGame(winner) {
+  const msg = document.createElement('div');
+  msg.textContent = `Player ${winner} Wins!`;
+  msg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:42px;font-weight:900;color:#fbbf24;text-shadow:0 0 30px #fbbf24;pointer-events:none;z-index:1000;';
+  document.body.appendChild(msg);
+  setTimeout(() => msg.remove(), 2000);
+
+  playAgainBtn.classList.remove('hidden');
+  playAgainBtn.onclick = (ev) => {
+    ev.preventDefault();
+    payThen(() => {
+      playAgainBtn.classList.add('hidden');
+      resetGame();
+    }, playAgainBtn);
+  };
+}
+
+/* ===== Event Listeners ===== */
+playBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  payThen(() => {
+    document.getElementById('intro-overlay').classList.add('hidden');
+    updatePaid(true);
+    drawDartboard();
+  }, playBtn);
+});
+
+startGameBtn.addEventListener('click', () => {
+  if (!paid) return;
+  resetGame();
+});
+
+throwBtn.addEventListener('click', throwDart);
+resetGameBtn.addEventListener('click', resetGame);
+
+drawDartboard();
+updateHUD();
+
+window.addEventListener('error', e => console.error('Error:', e.error || e));
+window.addEventListener('unhandledrejection', e => console.error('Unhandled promise:', e.reason));
+</script>
+</body>
+</html>
